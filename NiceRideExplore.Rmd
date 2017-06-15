@@ -1,0 +1,48 @@
+---
+title: "Nice Ride Explore"
+author: "Sean Bartz"
+date: "6/15/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(mosaic)
+library(ggformula)
+library(lubridate)
+```
+
+## Read in the data
+
+```{r}
+Rides <- read_csv("data2016/Nice_ride_trip_history_2016_season.csv")
+names(Rides) <- c("sdate", "sstation", "sstation_num","edate","estation","estation_num","duration","client")
+
+Rides <-
+  Rides %>%
+  mutate(sdate = mdy_hm(sdate), edate = mdy_hm(edate)) %>%
+  filter(client == "Casual" | client== "Member")
+```
+
+## Plotting
+
+Here we can see the proportion of rides that start at a given hour of the day, separated by the day of the week, with 1 = Sunday and 7 = Saturday. This includes both casual users and members.
+
+```{r}
+Rides %>%
+  mutate(day_of_week=lubridate::wday(sdate))%>%
+  mutate(start_time=lubridate::hour(sdate)+lubridate::minute(sdate) / 60) %>%
+  ggplot(aes(start_time))+geom_density(position=position_stack())+facet_wrap(~day_of_week)
+```
+
+Here, we group all weekdays together, and also separate out the casual users from members. We can clearly see morning and evening commutes, as well as lunchtime trips, for the members on weekdays.
+
+```{r}
+Rides %>%
+  mutate(day_of_week=lubridate::wday(sdate))%>%
+  mutate(wday = ifelse(lubridate::wday(sdate) %in% c(1,7), "weekend", "weekday"))%>%
+  mutate(start_time=lubridate::hour(sdate)+lubridate::minute(sdate) / 60) %>%
+  #filter(estation == "15th & L St NW") %>%
+  ggplot(aes(start_time,fill=client))+geom_density(alpha=0.5)+facet_wrap(~wday)
+```
